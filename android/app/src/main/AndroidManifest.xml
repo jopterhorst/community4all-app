@@ -59,7 +59,7 @@
 
 
     <application
-        android:label="HumHub"
+        android:label="Community4All"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -98,7 +98,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="go.humhub.com"
+                    android:host="community4all.jopterhorst.nl"
                     android:scheme="https" />
             </intent-filter>
             <!--Add this filter, to support sharing any type of files-->

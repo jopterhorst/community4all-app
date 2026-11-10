@@ -1,0 +1,80 @@
+name: community4all-build
+
+# Test builds of the Community4All app: an installable Android APK and an iOS Simulator app.
+# Firebase config comes from the secrets FIREBASE_GOOGLE_SERVICES_JSON_BASE64 and
+# FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64 (as in upstream's version-release.yml); without them
+# the build uses placeholders, so the app runs but gets no push notifications.
+# The APK is signed with the upload key in PLAYSTORE_KEYSTORE_BASE64 / PLAYSTORE_STORE_PASSWORD /
+# PLAYSTORE_KEY_PASSWORD if set, else with a throwaway debug key.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Read Flutter version from .fvmrc
+        run: echo "FLUTTER_VERSION=$(jq -r .flutter .fvmrc)" >> "$GITHUB_ENV"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Firebase config
+        env:
+          CONFIG: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$CONFIG" ]; then echo -n "$CONFIG" | base64 --decode > android/app/google-services.json
+          else echo "::warning::No Firebase secret: placeholder config, push will not work"
+               cp .github/firebase-placeholder/google-services.json android/app/; fi
+      - name: Upload key
+        env:
+          KEYSTORE: ${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PLAYSTORE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then
+            echo -n "$KEYSTORE" | base64 --decode > android/app/keystore.jks
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=upload\nstoreFile=./keystore.jks\n' \
+              "$STORE_PASSWORD" "$KEY_PASSWORD" > android/key.properties
+          else echo "::warning::No upload key: APK is signed with a debug key"; fi
+      - run: flutter pub get
+      - run: flutter build apk --release --build-number=${{ github.run_number }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: community4all-android
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  ios-simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read Flutter version from .fvmrc
+        run: echo "FLUTTER_VERSION=$(jq -r .flutter .fvmrc)" >> "$GITHUB_ENV"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Firebase config
+        env:
+          CONFIG: ${{ secrets.FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+        run: |
+          if [ -n "$CONFIG" ]; then echo -n "$CONFIG" | base64 --decode > ios/GoogleService-Info.plist
+          else cp .github/firebase-placeholder/GoogleService-Info.plist ios/; fi
+      - run: flutter pub get
+      - run: flutter build ios --simulator --debug
+      - name: Zip Runner.app
+        run: cd build/ios/iphonesimulator && zip -qr community4all-simulator.zip Runner.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: community4all-ios-simulator
+          path: build/ios/iphonesimulator/community4all-simulator.zip

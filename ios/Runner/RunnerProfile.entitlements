@@ -6,11 +6,11 @@
 	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:go.humhub.com</string>
+		<string>applinks:community4all.jopterhorst.nl</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.humhub</string>
+		<string>group.com.victory4all.community</string>
 	</array>
 </dict>
 </plist>
