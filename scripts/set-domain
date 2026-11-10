@@ -8,15 +8,16 @@ cd "$(dirname "$0")/.."
 host=${1:?Usage: scripts/set-domain <host, without https://>}
 host=${host#https://}; host=${host%%/*}
 
-# Read by lib/flavored (HumHubF, ManifestF). Colours match the site's own web manifest.
+# Read by lib/flavored (HumHubF, ManifestF). Colours go without '#', which starts a comment in .env.
+# THEME_COLOR fills the strip behind the phone's status bar: the site's light top bar, so the clock stays readable.
 cat > assets/.env <<EOF
 MANIFEST_URL=https://$host
 START_URL=https://$host
 NAME=Community4All
 SHORT_NAME=Community4All
 DISPLAY=standalone
-BACKGROUND_COLOR=#f2ede6
-THEME_COLOR=#b02d30
+BACKGROUND_COLOR=f2ede6
+THEME_COLOR=fef3f2
 EOF
 
 # App Links / Universal Links: links to the site open in the app once the site serves
