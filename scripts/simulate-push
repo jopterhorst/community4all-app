@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Delivers a push notification to the app on the iOS Simulator or the Android emulator, without Firebase.
+# It carries what HumHub's Push Notifications module (fcm-push) would send: the site name as title, the
+# notification text, the page to open on tap and the unread count.
+# Usage: scripts/simulate-push ios|android "<text>" [url to open] [unread count]
+# Example: scripts/simulate-push android 'Thandeka Nkosi sent you a new message' https://community4all.jopterhorst.nl/mail/mail/index 1
+# iOS: needs a booted Simulator. Android: needs an emulator image without Play Store, so `adb root` works.
+set -euo pipefail
+
+platform=${1:?Usage: scripts/simulate-push ios|android "<text>" [url] [count]}
+body=${2:?Usage: scripts/simulate-push ios|android "<text>" [url] [count]}
+url=${3:-}
+count=${4:-1}
+title=Community4All
+app=com.victory4all.community
+id="simulated-$(date +%s)"
+
+case $platform in
+ios)
+  # The Simulator shows this like an APNs push; gcm.message_id makes FlutterFire treat it as a Firebase message.
+  jq -n --arg title "$title" --arg body "$body" --arg url "$url" --arg count "$count" --arg id "$id" '{
+    aps: {alert: {title: $title, body: $body}, badge: ($count | tonumber), sound: "default"},
+    url: $url, notification_count: $count, "gcm.message_id": $id
+  }' | xcrun simctl push booted "$app" -
+  ;;
+android)
+  # Hands the message to the app's Firebase receivers as Google Play services would. They only accept it
+  # from a privileged sender, hence root. Firebase then shows the notification itself, as with a real push.
+  adb=${ADB:-$(command -v adb || echo "${ANDROID_HOME:-}/platform-tools/adb")}
+  q() { local s=${1//\'/\'\"\'\"\'}; printf "'%s'" "$s"; }  # quotes a value for the device's shell
+  "$adb" root >/dev/null
+  "$adb" wait-for-device
+  "$adb" shell "am broadcast -a com.google.android.c2dm.intent.RECEIVE -p $app \
+    --es google.message_id $id --es google.sent_time $(date +%s)000 --es message_type gcm --es from simulated \
+    --es gcm.n.e 1 --es gcm.n.title $(q "$title") --es gcm.n.body $(q "$body") --es gcm.n.notification_count $count \
+    --es url $(q "$url") --es notification_count $count" >/dev/null
+  ;;
+*)
+  echo "Unknown platform $platform: use ios or android" >&2
+  exit 1
+  ;;
+esac
+echo "Push sent to the $platform app: $body"

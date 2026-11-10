@@ -12,6 +12,7 @@ HumHub's app runs as a single-site ("flavored") app whenever its package name is
 | iOS app group `group.com.victory4all.community` (shared with the Share Extension) | `project.pbxproj` (`CUSTOM_GROUP_ID`), the three `.entitlements` files |
 | Deep-link host | `AndroidManifest.xml` (App Links), `ios/Runner/*.entitlements` (`applinks:`), written by `scripts/set-domain` |
 | Icon and splash | `branding/mark.svg`, rendered by `branding/render-icons.sh` into the Android `mipmap-*` folders and the iOS asset catalog |
+| Android push banner and status-bar icon | `android/app/src/main/kotlin/com/victory4all/community/Community4AllApplication.kt`, `AndroidManifest.xml`, `drawable-*/ic_notification.png` |
 | Test builds | `.github/workflows/community4all-build.yml` |
 
 ## Keeping up with HumHub
@@ -38,6 +39,19 @@ Push goes through Victory4All's own Firebase project:
 4. **iPhone only.** Push also needs an APNs key from the Apple Developer account, uploaded under Firebase → Project settings → Cloud Messaging.
 
 The app tells HumHub its package name, and HumHub then sends through the Firebase project configured in step 3.
+
+On Android, pushes arrive in the app's own high-importance "Notifications" channel, so they pop up as a banner. That channel is created in `Community4AllApplication.kt` and set in `AndroidManifest.xml`. The status bar shows the white mark `ic_notification`, rendered by `branding/render-icons.sh`.
+
+### Testing push without Firebase
+
+`scripts/simulate-push` delivers a notification to the app on the iOS Simulator or an Android emulator. It sends what HumHub would: the site name as the title, the notification text, and the page to open when the notification is tapped.
+
+```bash
+scripts/simulate-push ios 'Thandeka Nkosi sent you a new message' https://community4all.jopterhorst.nl/mail/mail/index
+scripts/simulate-push android 'Thandeka Nkosi sent you a new message' https://community4all.jopterhorst.nl/mail/mail/index
+```
+
+Android needs an emulator image without Play Store (a "Google APIs" image), because the script uses `adb root`. The script tests how the app shows and opens notifications. It does not test whether HumHub sends them.
 
 ## Test builds
 
