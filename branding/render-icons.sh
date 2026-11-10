@@ -10,11 +10,11 @@ CHROME=${CHROME:-$(ls -d ~/Library/Caches/ms-playwright/chromium_headless_shell-
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# render <out.png> <px> <mark height as a fraction of the canvas> <background, or "none">
+# render <out.png> <px> <mark height as a fraction of the canvas> <background, or "none"> [one colour for the whole mark]
 render() {
-  local out=$1 px=$2 scale=$3 bg=$4
+  local out=$1 px=$2 scale=$3 bg=$4 fill=${5:-}
   cat > "$TMP/page.html" <<HTML
-<html><body style="margin:0;background:${bg/none/transparent}">
+<html><body style="margin:0;background:${bg/none/transparent}">${fill:+<style>path{fill:$fill}</style>}
 <svg id="s" width="$px" height="$px" style="display:block">$(sed -n '/<path/p' branding/mark.svg)</svg>
 <script>
   const s = document.getElementById('s'), b = s.getBBox(), side = b.height / $scale;
@@ -29,6 +29,7 @@ HTML
 render "$TMP/icon.png" 1024 0.62 "$CREAM"          # full-bleed square: iOS rounds the corners itself
 render "$TMP/foreground.png" 1024 0.42 none        # Android adaptive foreground: inside the 66/108 safe zone
 render "$TMP/splash.png" 1024 0.9 none             # centred on the cream splash background
+render "$TMP/notification.png" 1024 0.84 none white # Android status bar: a white silhouette, tinted by the system
 
 resize() { sips -s format png -z "$2" "$2" "$1" --out "$3" >/dev/null; }
 
@@ -47,12 +48,14 @@ resize "$TMP/splash.png" 185 "$L/LaunchImage.png"
 resize "$TMP/splash.png" 370 "$L/LaunchImage@2x.png"
 resize "$TMP/splash.png" 555 "$L/LaunchImage@3x.png"
 
-# Android: legacy square icon, adaptive foreground, and the splash mark, per density.
+# Android: legacy square icon, adaptive foreground, the splash mark and the push notification icon, per density.
 for d in mdpi:1 hdpi:1.5 xhdpi:2 xxhdpi:3 xxxhdpi:4; do
   name=${d%%:*} m=${d##*:}
   dir=android/app/src/main/res/mipmap-$name
   resize "$TMP/icon.png" "$(printf '%.0f' "$(echo "48*$m" | bc)")" "$dir/ic_launcher.png"
   resize "$TMP/foreground.png" "$(printf '%.0f' "$(echo "108*$m" | bc)")" "$dir/ic_launcher_foreground.png"
   resize "$TMP/splash.png" "$(printf '%.0f' "$(echo "160*$m" | bc)")" "$dir/launch_image.png"
+  mkdir -p "android/app/src/main/res/drawable-$name"
+  resize "$TMP/notification.png" "$(printf '%.0f' "$(echo "24*$m" | bc)")" "android/app/src/main/res/drawable-$name/ic_notification.png"
 done
 echo "Icons and splash images written."

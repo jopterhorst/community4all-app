@@ -2,4 +2,6 @@
 <resources>
     <!-- Victory4All cream, also the splash background (see assets/.env BACKGROUND_COLOR). -->
     <color name="brand_background">#F2EDE6</color>
+    <!-- Victory4All coral: tints the push notification icon. -->
+    <color name="brand_coral">#D34242</color>
 </resources>

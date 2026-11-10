@@ -60,7 +60,7 @@
 
     <application
         android:label="Community4All"
-        android:name="${applicationName}"
+        android:name="com.victory4all.community.Community4AllApplication"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupOnly="false"
@@ -138,6 +138,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Push notifications: our high-importance channel (created in Community4AllApplication.kt), so they pop up
+             as a banner, and a one-colour status-bar icon (rendered by branding/render-icons.sh). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="community4all" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/brand_coral" />
 
        <provider
            android:name="com.pichillilorenzo.flutter_inappwebview_android.InAppWebViewFileProvider"
